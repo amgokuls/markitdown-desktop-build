@@ -1,0 +1,9 @@
+# Core MarkItDown with all optional converters
+markitdown[all]>=0.1.0
+
+# GUI framework
+PySide6>=6.7.0
+
+# Markdown rendering in preview pane
+markdown>=3.7
+Pygments>=2.18

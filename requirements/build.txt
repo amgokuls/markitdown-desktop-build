@@ -1,0 +1,5 @@
+-r base.txt
+
+# Packaging
+pyinstaller>=6.9
+pyinstaller-hooks-contrib>=2024.9

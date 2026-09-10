@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<catalog>
+  <book id="bk001">
+    <title>The Great Conversion</title>
+    <author>A. Test Author</author>
+    <genre>Fiction</genre>
+    <price>14.99</price>
+    <description>A gripping tale about document conversion.</description>
+  </book>
+  <book id="bk002">
+    <title>Markdown Mastery</title>
+    <author>B. Writer</author>
+    <genre>Technical</genre>
+    <price>29.99</price>
+    <description>Everything you need to know about Markdown.</description>
+  </book>
+</catalog>
