@@ -21,6 +21,6 @@ jobs:
         
     - name: Upload to Release
       run: |
-        gh release upload v1.0.0 ./installer/MarkItDown-Desktop-Setup.exe --clobber
+        gh release upload v1.0.0 ./installer/MarkItDown-Desktop-Setup.exe --clobber -R amgokuls/markitdown-desktop-build
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
