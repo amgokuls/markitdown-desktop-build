@@ -1,8 +1,13 @@
 ; MarkItDown Desktop — NSIS Installer Script
 !include "MUI2.nsh"
 
+; ROOT_DIR is passed in from the command line via /DROOT_DIR=...
+!ifndef ROOT_DIR
+  !define ROOT_DIR ".."
+!endif
+
 Name "MarkItDown Desktop"
-OutFile "MarkItDown-Desktop-Setup.exe"
+OutFile "${ROOT_DIR}\installer\MarkItDown-Desktop-Setup.exe"
 InstallDir "$PROGRAMFILES64\MarkItDown Desktop"
 InstallDirRegKey HKCU "Software\MarkItDownDesktop" ""
 RequestExecutionLevel admin
@@ -18,8 +23,8 @@ VIAddVersionKey "LegalCopyright" "Copyright 2026"
 
 ; Interface settings
 !define MUI_ABORTWARNING
-!define MUI_ICON "..\resources\icons\AppIcon.ico"
-!define MUI_UNICON "..\resources\icons\AppIcon.ico"
+!define MUI_ICON "${ROOT_DIR}\resources\icons\AppIcon.ico"
+!define MUI_UNICON "${ROOT_DIR}\resources\icons\AppIcon.ico"
 !define MUI_WELCOMEPAGE_TITLE "Welcome to MarkItDown Desktop Setup"
 !define MUI_WELCOMEPAGE_TEXT "This will install MarkItDown Desktop v1.0.0 on your computer.$\r$\n$\r$\nMarkItDown Desktop converts documents (PDF, Word, Excel, PowerPoint and more) to Markdown format.$\r$\n$\r$\nClick Next to continue."
 !define MUI_FINISHPAGE_RUN "$INSTDIR\MarkItDown Desktop.exe"
@@ -38,9 +43,9 @@ VIAddVersionKey "LegalCopyright" "Copyright 2026"
 
 Section "Install"
   SetOutPath "$INSTDIR"
-  
-  ; Include the main executable and all its dependencies
-  File /r "dist\MarkItDown Desktop\*.*"
+
+  ; Include the main executable and all its dependencies from dist folder
+  File /r "${ROOT_DIR}\dist\MarkItDown Desktop\*.*"
 
   ; Create Start Menu shortcut
   CreateDirectory "$SMPROGRAMS\MarkItDown Desktop"
