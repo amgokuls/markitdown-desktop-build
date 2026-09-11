@@ -1,0 +1,26 @@
+name: Upload to Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Run ID of the successful build'
+        required: true
+
+jobs:
+  upload:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+      with:
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        run-id: ${{ github.event.inputs.run_id }}
+        name: MarkItDown-Desktop-Windows-Installer
+        path: ./installer
+        
+    - name: Upload to Release
+      run: |
+        gh release upload v1.0.0 ./installer/MarkItDown-Desktop-Setup.exe --clobber
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
