@@ -169,23 +169,26 @@ class MainWindow(QMainWindow):
         self._history_panel.clearRequested.connect(self._on_clear_history)
         self.splitter.addWidget(self._history_panel)
         
-        # 2. Workspace (Drop Zone + File List)
+        # 2. Workspace (Drop Zone + File List stacked)
         workspace = QWidget()
         ws_layout = QVBoxLayout(workspace)
         ws_layout.setContentsMargins(0, 0, 0, 0)
         ws_layout.setSpacing(0)
-        
+
         self._drop_zone = DropZone(self._colors)
         self._drop_zone.filesDropped.connect(self._on_files_dropped)
         self._drop_zone.chooseFilesClicked.connect(self._on_add_files)
-        
+        self._drop_zone.setMinimumHeight(200)
+        # stretch=0 means it won't shrink/grow — stays exactly its preferred size
+        ws_layout.addWidget(self._drop_zone, stretch=0)
+
         self._file_list = FileListWidget(self._colors)
         self._file_list.fileRemoved.connect(self._update_convert_button)
         self._file_list.fileSelected.connect(self._on_file_selected)
-        self._file_list.hide() # Hide initially
-        
-        ws_layout.addWidget(self._drop_zone)
-        ws_layout.addWidget(self._file_list)
+        self._file_list.hide()  # Hidden until files are added
+        # stretch=1 means it fills all remaining space
+        ws_layout.addWidget(self._file_list, stretch=1)
+
         
         self.splitter.addWidget(workspace)
         
@@ -285,8 +288,17 @@ class MainWindow(QMainWindow):
             
     def _on_file_finished(self, result):
         path_str = str(result.input_file)
+
+        # ── Fix 1: update the FileItem's status so the row re-renders correctly ──
+        from app.conversion.models import ConversionStatus
+        item = self._file_list.get_item(path_str)
+        if item:
+            item.status = ConversionStatus.SUCCESS if result.success else ConversionStatus.ERROR
+            item.error_message = result.error_message
+            item.result = result          # store result on item for click-to-preview
+
         self._file_list.update_file_status(path_str)
-        
+
         # Build HistoryEntry
         from app.conversion.models import HistoryEntry
         entry = HistoryEntry(
@@ -296,14 +308,15 @@ class MainWindow(QMainWindow):
             duration_seconds=result.duration_seconds,
             converted_at=result.converted_at
         )
-        
+
         # Update history
         self._history.add(entry)
         self._history_panel.prepend_entry(entry)
-        
+
         # Show in preview if successful
         if result.success:
             self._preview_panel.set_content(result.display_name, result.markdown)
+
 
     def _on_all_finished(self, total: int, success: int):
         self.act_convert.setVisible(True)
@@ -346,11 +359,67 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage("Markdown copied to clipboard", 3000)
 
     def _on_save_markdown(self):
-        md = self._preview_panel.current_markdown
-        if md:
-            path = self._fs.save_markdown(self, self._preview_panel.current_filename)
+        """Save all successfully converted files as .md into a chosen folder."""
+        # Collect all items that have been converted successfully
+        converted = [
+            item for item in self._file_list.all_items()
+            if item.result and item.result.success
+        ]
+
+        if not converted:
+            # Nothing converted yet — try the preview panel as fallback
+            md = self._preview_panel.current_markdown
+            if md:
+                from app.conversion.models import ConversionStatus
+                path, _ = __import__('PySide6.QtWidgets', fromlist=['QFileDialog']).QFileDialog.getSaveFileName(
+                    self,
+                    "Save Markdown",
+                    str(Path.home() / (self._preview_panel.current_filename or "output.md")),
+                    "Markdown Files (*.md);;All Files (*)",
+                )
+                if path:
+                    if not path.endswith(".md"):
+                        path += ".md"
+                    self._fs.write_markdown(Path(path), md)
+                    self.statusBar().showMessage(f"Saved: {Path(path).name}", 3000)
+            return
+
+        if len(converted) == 1:
+            # Single file — show a Save As dialog with .md forced
+            item = converted[0]
+            default_name = item.result.suggested_output_name  # already ends in .md
+            path, _ = __import__('PySide6.QtWidgets', fromlist=['QFileDialog']).QFileDialog.getSaveFileName(
+                self,
+                "Save Markdown",
+                str(Path.home() / default_name),
+                "Markdown Files (*.md);;All Files (*)",
+            )
             if path:
-                self._fs.write_markdown(path, md)
+                if not path.endswith(".md"):
+                    path += ".md"
+                self._fs.write_markdown(Path(path), item.result.markdown)
+                self.statusBar().showMessage(f"Saved: {Path(path).name}", 3000)
+        else:
+            # Multiple files — pick a folder and save all as .md
+            from PySide6.QtWidgets import QFileDialog
+            folder = QFileDialog.getExistingDirectory(
+                self,
+                f"Choose folder to save {len(converted)} Markdown files",
+                str(Path.home()),
+                QFileDialog.Option.ShowDirsOnly,
+            )
+            if not folder:
+                return
+            folder_path = Path(folder)
+            saved = 0
+            for item in converted:
+                out_path = folder_path / item.result.suggested_output_name
+                self._fs.write_markdown(out_path, item.result.markdown)
+                saved += 1
+            self.statusBar().showMessage(
+                f"Saved {saved} file(s) to {folder_path.name}/", 4000
+            )
+
 
     def _show_settings(self):
         dlg = SettingsDialog(self)
