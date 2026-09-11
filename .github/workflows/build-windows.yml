@@ -1,4 +1,4 @@
-name: Build Windows App
+name: Build Windows Installer
 
 on:
   push:
@@ -25,12 +25,34 @@ jobs:
         pip install -r requirements/base.txt -r requirements/build.txt
         pip install pillow pyinstaller
 
-    - name: Build with PyInstaller (OneFile)
+    - name: Build with PyInstaller (folder mode for NSIS)
       run: |
-        pyinstaller --noconfirm --clean --onefile --windowed --name "MarkItDown Desktop" --icon "resources\icons\AppIcon.ico" --add-data "resources;resources" --hidden-import "markitdown" --hidden-import "PySide6.QtWebEngineCore" --hidden-import "markdown" --hidden-import "pygments" app\main.py
+        pyinstaller `
+          --noconfirm `
+          --clean `
+          --windowed `
+          --name "MarkItDown Desktop" `
+          --icon "resources\icons\AppIcon.ico" `
+          --add-data "resources;resources" `
+          --hidden-import "markitdown" `
+          --hidden-import "PySide6.QtWebEngineCore" `
+          --hidden-import "markdown" `
+          --hidden-import "pygments" `
+          --collect-data "magika" `
+          --copy-metadata "magika" `
+          --copy-metadata "markitdown" `
+          app\main.py
 
-    - name: Upload Windows Executable Artifact
+    - name: Install NSIS
+      run: choco install nsis -y
+
+    - name: Build NSIS Installer
+      run: |
+        cd installer
+        makensis installer.nsi
+
+    - name: Upload Installer Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: MarkItDown-Desktop-Windows-Standalone
-        path: dist\MarkItDown Desktop.exe
+        name: MarkItDown-Desktop-Windows-Installer
+        path: installer\MarkItDown-Desktop-Setup.exe
